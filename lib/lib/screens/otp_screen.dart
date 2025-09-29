@@ -43,7 +43,9 @@ class _OtpScreenState extends State<OtpScreen> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => HomeScreen(name: widget.name),
+                    builder: (context) => HomeScreen(onLogout: () async {
+                      return true;
+                    }),
                   ),
                 );
               },
