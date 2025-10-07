@@ -14,7 +14,8 @@ import 'home_screen.dart';
 import '../../services/session.dart';
 
 class PhoneInputScreen extends StatefulWidget {
-  const PhoneInputScreen({super.key});
+  final SessionService session;
+  const PhoneInputScreen({super.key, required this.session});
 
   @override
   State<PhoneInputScreen> createState() => _PhoneInputScreenState();
@@ -58,6 +59,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
 
   // -------- CADASTRO --------
   Future<bool> _submitRegister() async {
+    print(widget.session.currentUserId());
     if (_nameController.text.trim().isEmpty ||
         _raController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
@@ -109,7 +111,10 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
         return false;
       }
 
-      // registra device/token + salva sessão
+      // 1) salve o user_id imediatamente
+      await widget.session.saveSession(userId: userId);
+
+      // 2) tente pegar o token e registrar o device (melhoria posterior, não bloqueia login)
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null && token.isNotEmpty) {
         await http.post(
@@ -121,8 +126,10 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
             'platform': _platformLabel(),
           }),
         );
-        await SessionService(base).saveSession(userId: userId, fcmToken: token);
+        // atualize o token localmente (opcional)
+        await widget.session.saveSession(userId: userId, fcmToken: token);
       }
+
 
       return true;
     } catch (e) {
@@ -159,14 +166,20 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
       }
 
       final data  = jsonDecode(res.body) as Map<String, dynamic>;
-      final users = (data['users'] as List?) ?? [];
-      if (users.isEmpty) {
+      final user = data['user'];
+      //final users = (data['user'] as List?) ?? [];
+      //if (users.isEmpty) {
+      //  ScaffoldMessenger.of(context).showSnackBar(
+      //    const SnackBar(content: Text('Usuário não encontrado')),
+      //  );
+      //  return false;
+      //}
+      if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Usuário não encontrado')),
         );
         return false;
       }
-      final user   = users.first as Map<String, dynamic>;
       final userId = user['id'] as int?;
 
       if (userId == null) {
@@ -176,7 +189,10 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
         return false;
       }
 
-      // registra device/token + salva sessão
+      // 1) salve o user_id imediatamente
+      await widget.session.saveSession(userId: userId);
+
+      // 2) depois tente registrar o token
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null && token.isNotEmpty) {
         await http.post(
@@ -188,7 +204,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
             'platform': _platformLabel(),
           }),
         );
-        await SessionService(base).saveSession(userId: userId, fcmToken: token);
+        await widget.session.saveSession(userId: userId, fcmToken: token);
       }
 
       return true;
@@ -218,18 +234,14 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
             ra: _raController.text,
             phone: _phoneController.text,
             imagePath: '', // opcional
+            session: widget.session,
           ),
         ),
       );
-      // Para ir direto: descomente abaixo e remova o push para OTP:
-      // Navigator.of(context).pushAndRemoveUntil(
-      //   MaterialPageRoute(builder: (_) => HomeScreen(onLogout: () => SessionService(base).logout())),
-      //   (_) => false,
-      // );
     } else {
       // login -> Home
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => HomeScreen(onLogout: () => SessionService(base).logout())),
+        MaterialPageRoute(builder: (_) => HomeScreen(session: widget.session, onLogout: () => widget.session.logout())),
         (_) => false,
       );
     }

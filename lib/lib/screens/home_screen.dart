@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:teste/lib/screens/phone_input_screen.dart';
 import 'package:teste/lib/screens/notification_history_screen.dart';
+import 'package:teste/services/session.dart';
 
 class HomeScreen extends StatelessWidget {
   //final String name;
   //const HomeScreen({super.key, required this.name});
 
   final Future<bool> Function() onLogout;
-  const HomeScreen({super.key, required this.onLogout});
+  final SessionService session;
+  const HomeScreen({super.key, required this.onLogout, required this.session});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,7 @@ class HomeScreen extends StatelessWidget {
                 await onLogout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const PhoneInputScreen()),
+                    MaterialPageRoute(builder: (_) => PhoneInputScreen(session: session)),
                     (_) => false,
                   );
                 }

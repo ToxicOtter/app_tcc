@@ -9,24 +9,6 @@ import 'services/session.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
-//void main() async {
-//  WidgetsFlutterBinding.ensureInitialized();
-//  final session = SessionService('http://10.0.0.113:5001');
-//
-//  if (Firebase.apps.isEmpty) {
-//    await Firebase.initializeApp(
-//      options: DefaultFirebaseOptions.currentPlatform,
-//    );
-//  }
-//
-//  FirebaseApi.registerBackgroundHandler();
-//  await FirebaseApi().initNotifications();
-//  await session.handleTokenRefresh();
-//
-//  final userId = await session.currentUserId();
-//  runApp(MyApp(session: session, isLogged: userId != null));
-//}
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const BootApp()); // mostra uma tela de loading enquanto inicializa
@@ -48,33 +30,69 @@ class _BootAppState extends State<BootApp> {
     _bootstrap(); // não aguarde no main
   }
 
+  // Future<void> _bootstrap() async {
+  //   try {
+  //     // Firebase só uma vez
+  //     if (Firebase.apps.isEmpty) {
+  //       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  //     }
+
+  //     // registra handler de background
+  //     FirebaseApi.registerBackgroundHandler();
+
+  //     // inicie notificações sem bloquear a UI
+  //     // (se preferir aguardar, use um timeout curto)
+  //     unawaited(FirebaseApi().initNotifications());
+
+  //     // tente renovar sessão; não deixe travar se o servidor estiver off
+  //     await _session.handleTokenRefresh().timeout(const Duration(seconds: 6)).catchError((_) {});
+  //     final userId = await _session.currentUserId().timeout(const Duration(seconds: 30)).catchError((_) => null);
+  //     print(_isLogged);
+  //     if (!mounted) return;
+  //     print(_isLogged);
+  //     setState(() => _isLogged = userId != null);
+  //   } catch (e) {
+  //     // se algo falhar, cai para a tela de login
+  //     debugPrint('Bootstrap error: $e');
+  //     print(_isLogged);
+  //     if (!mounted) return;
+  //     print(_isLogged);
+  //     setState(() => _isLogged = false);
+  //   }
+  // }
+
   Future<void> _bootstrap() async {
+    // 1) Firebase – se falhar, ainda assim seguimos
     try {
-      // Firebase só uma vez
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       }
+    } catch (e) {
+      debugPrint('[Boot] Firebase init falhou: $e');
+    }
 
-      // registra handler de background
+    // 2) Notificações – não bloqueie o fluxo de login
+    try {
       FirebaseApi.registerBackgroundHandler();
+      unawaited(FirebaseApi().initNotifications()); // não aguardar
+      unawaited(_session.handleTokenRefresh());     // não aguardar
+    } catch (e) {
+      debugPrint('[Boot] Notificações falharam: $e'); // ok seguir sem isso
+    }
 
-      // inicie notificações sem bloquear a UI
-      // (se preferir aguardar, use um timeout curto)
-      unawaited(FirebaseApi().initNotifications());
-
-      // tente renovar sessão; não deixe travar se o servidor estiver off
-      await _session.handleTokenRefresh().timeout(const Duration(seconds: 6)).catchError((_) {});
-      final userId = await _session.currentUserId().timeout(const Duration(seconds: 3)).catchError((_) => null);
-
+    // 3) Decidir tela inicial SOMENTE pelo user_id salvo
+    try {
+      final userId = await _session.currentUserId();
+      debugPrint('[Boot] userId lido no startup = $userId');
       if (!mounted) return;
       setState(() => _isLogged = userId != null);
     } catch (e) {
-      // se algo falhar, cai para a tela de login
-      debugPrint('Bootstrap error: $e');
+      debugPrint('[Boot] Erro lendo sessão: $e');
       if (!mounted) return;
       setState(() => _isLogged = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +108,8 @@ class _BootAppState extends State<BootApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       home: _isLogged!
-          ? HomeScreen(onLogout: () => _session.logout())
-          : const PhoneInputScreen(),
+          ? HomeScreen(session: _session, onLogout: () => _session.logout())
+          : PhoneInputScreen(session: _session),
     );
   }
 }

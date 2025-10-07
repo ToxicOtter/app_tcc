@@ -1,3 +1,4 @@
+// services/session.dart
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:http/http.dart' as http;
@@ -8,76 +9,77 @@ class SessionService {
   final String baseUrl;
   SessionService(this.baseUrl);
 
-  // chaves únicas e consistentes
-  static const _kUserId = 'userId';
-  static const _kFcmToken = 'fcmToken';
+  static const _kUserIdKey = 'user_id';
+  static const _kFcmKey    = 'fcm_token';
 
-  String _platform() {
+  String _platform(){
     if (kIsWeb) return 'web';
     switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'android';
-      case TargetPlatform.iOS:
-        return 'ios';
-      default:
-        return 'other';
+      case TargetPlatform.android: return 'android';
+      case TargetPlatform.iOS: return 'ios';
+      default: return 'other';
     }
   }
 
-  // ---------- Persistência local ----------
-  Future<void> saveSession({required int userId, required String fcmToken}) async {
+  Future<void> saveSession({required int userId, String? fcmToken}) async {
     final sp = await SharedPreferences.getInstance();
-    await sp.setInt(_kUserId, userId);
-    await sp.setString(_kFcmToken, fcmToken);
+    await sp.setInt(_kUserIdKey, userId);
+    if(fcmToken != null && fcmToken.isNotEmpty){
+      await sp.setString(_kFcmKey,    fcmToken);
+    };
+    print('salvou a sessão');
+  }
+
+  // (opcional) helper explícito
+  Future<void> saveUserId(int userId) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setInt(_kUserIdKey, userId);
   }
 
   Future<void> clearSession() async {
     final sp = await SharedPreferences.getInstance();
-    await sp.remove(_kUserId);
-    await sp.remove(_kFcmToken);
+    await sp.remove(_kUserIdKey);
+    await sp.remove(_kFcmKey);
   }
 
   Future<int?> currentUserId() async {
     final sp = await SharedPreferences.getInstance();
-    return sp.getInt(_kUserId);
+    return sp.getInt(_kUserIdKey);
   }
 
   Future<String?> currentFcmToken() async {
     final sp = await SharedPreferences.getInstance();
-    return sp.getString(_kFcmToken);
+    return sp.getString(_kFcmKey);
   }
 
-  // ---------- Login simples (exemplo) ----------
-  /// Ajuste esta rota para a sua API real. Aqui mandei username/email.
+  /// Exemplo de login (ajuste para sua API)
   Future<int?> login({String? username, String? email}) async {
     final resp = await http.post(
       Uri.parse('$baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'email': email}), // corrigido
+      body: jsonEncode({'username': username, 'email': email}),
     );
     if (resp.statusCode == 200) {
-      final js = jsonDecode(resp.body);
-      return js['user']?['id'] as int?;
+      final js = jsonDecode(resp.body) as Map<String, dynamic>;
+      return (js['user']?['id']) as int?;
     }
     return null;
   }
 
-  // ---------- Vincular device ao usuário ----------
-  /// Pega o token atual do FCM, envia para o backend e persiste localmente.
+  /// Registra/atualiza o device no backend e persiste sessão
   Future<bool> attachDeviceToUser(int userId) async {
     final token = await FirebaseMessaging.instance.getToken();
     if (token == null || token.isEmpty) return false;
 
     final r = await http.post(
-      Uri.parse('$baseUrl/api/devices/register'), // corrigido
+      Uri.parse('$baseUrl/api/devices/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'fcm_token': token,
-        'platform': _platform(), // corrigido
+        'platform': _platform(),
       }),
     );
-
     if (r.statusCode == 200) {
       await saveSession(userId: userId, fcmToken: token);
       return true;
@@ -85,14 +87,13 @@ class SessionService {
     return false;
   }
 
-  // ---------- Logout ----------
-  /// Remove o device no backend e limpa sessão local
   Future<bool> logout() async {
     final sp = await SharedPreferences.getInstance();
-    final userId = sp.getInt(_kUserId);
-    final token = sp.getString(_kFcmToken);
+    final userId = sp.getInt(_kUserIdKey);
+    final token  = sp.getString(_kFcmKey);
 
     if (userId != null && token != null && token.isNotEmpty) {
+      // se tiver endpoint de remoção de device, chame aqui
       await http.post(
         Uri.parse('$baseUrl/api/devices/delete'),
         headers: {'Content-Type': 'application/json'},
@@ -100,24 +101,18 @@ class SessionService {
       );
     }
 
-    // invalida token local do FCM (gera outro no próximo login)
-    try {
-      await FirebaseMessaging.instance.deleteToken();
-    } catch (_) {}
-
+    try { await FirebaseMessaging.instance.deleteToken(); } catch (_) {}
     await clearSession();
     return true;
   }
 
-  // ---------- Refresh do token ----------
-  /// Se o FCM rotacionar token, avisa o backend e atualiza localmente
   Future<void> handleTokenRefresh() async {
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       final sp = await SharedPreferences.getInstance();
-      final userId = sp.getInt(_kUserId);
-      final oldToken = sp.getString(_kFcmToken);
+      final userId = sp.getInt(_kUserIdKey);
+      final oldToken = sp.getString(_kFcmKey);
 
-      if (userId != null && oldToken != null && oldToken.isNotEmpty) {
+      if (userId != null && (oldToken ?? '').isNotEmpty) {
         await http.post(
           Uri.parse('$baseUrl/api/devices/refresh'),
           headers: {'Content-Type': 'application/json'},
@@ -125,10 +120,10 @@ class SessionService {
             'user_id': userId,
             'old_token': oldToken,
             'new_token': newToken,
-            'platform': _platform(), // corrigido
+            'platform': _platform(),
           }),
         );
-        await sp.setString(_kFcmToken, newToken);
+        await sp.setString(_kFcmKey, newToken);
       }
     });
   }

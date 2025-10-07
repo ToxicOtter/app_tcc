@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:teste/services/session.dart';
 import 'home_screen.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -7,6 +8,7 @@ class OtpScreen extends StatefulWidget {
   final String ra;
   final String phone;
   final String imagePath;
+  final SessionService session;
 
   const OtpScreen({
     super.key,
@@ -15,6 +17,7 @@ class OtpScreen extends StatefulWidget {
     required this.ra,
     required this.phone,
     required this.imagePath,
+    required this.session,
   });
 
   @override
@@ -43,7 +46,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => HomeScreen(onLogout: () async {
+                    builder: (context) => HomeScreen(session: widget.session, onLogout: () async {
                       return true;
                     }),
                   ),
