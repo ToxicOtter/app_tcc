@@ -4,9 +4,6 @@ import 'package:teste/lib/screens/notification_history_screen.dart';
 import 'package:teste/services/session.dart';
 
 class HomeScreen extends StatelessWidget {
-  //final String name;
-  //const HomeScreen({super.key, required this.name});
-
   final Future<bool> Function() onLogout;
   final SessionService session;
   const HomeScreen({super.key, required this.onLogout, required this.session});
