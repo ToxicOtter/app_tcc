@@ -26,7 +26,6 @@ class SessionService {
     if(fcmToken != null && fcmToken.isNotEmpty){
       await sp.setString(_kFcmKey,    fcmToken);
     };
-    print('salvou a sessão');
   }
 
   // (opcional) helper explícito

@@ -59,7 +59,6 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
 
   // -------- CADASTRO --------
   Future<bool> _submitRegister() async {
-    print(widget.session.currentUserId());
     if (_nameController.text.trim().isEmpty ||
         _raController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
