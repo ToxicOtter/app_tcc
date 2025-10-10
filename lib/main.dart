@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:teste/lib/screens/home_screen.dart';
-import 'package:teste/lib/screens/notification_screen.dart';
 import 'lib/screens/phone_input_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -29,37 +28,6 @@ class _BootAppState extends State<BootApp> {
     super.initState();
     _bootstrap(); // não aguarde no main
   }
-
-  // Future<void> _bootstrap() async {
-  //   try {
-  //     // Firebase só uma vez
-  //     if (Firebase.apps.isEmpty) {
-  //       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  //     }
-
-  //     // registra handler de background
-  //     FirebaseApi.registerBackgroundHandler();
-
-  //     // inicie notificações sem bloquear a UI
-  //     // (se preferir aguardar, use um timeout curto)
-  //     unawaited(FirebaseApi().initNotifications());
-
-  //     // tente renovar sessão; não deixe travar se o servidor estiver off
-  //     await _session.handleTokenRefresh().timeout(const Duration(seconds: 6)).catchError((_) {});
-  //     final userId = await _session.currentUserId().timeout(const Duration(seconds: 30)).catchError((_) => null);
-  //     print(_isLogged);
-  //     if (!mounted) return;
-  //     print(_isLogged);
-  //     setState(() => _isLogged = userId != null);
-  //   } catch (e) {
-  //     // se algo falhar, cai para a tela de login
-  //     debugPrint('Bootstrap error: $e');
-  //     print(_isLogged);
-  //     if (!mounted) return;
-  //     print(_isLogged);
-  //     setState(() => _isLogged = false);
-  //   }
-  // }
 
   Future<void> _bootstrap() async {
     // 1) Firebase – se falhar, ainda assim seguimos
@@ -116,31 +84,3 @@ class _BootAppState extends State<BootApp> {
 
 // utilitário para "ignorar" o await conscientemente
 void unawaited(Future<void> f) {}
-
-
-//class MyApp extends StatelessWidget {
-//  final SessionService session;
-//  final bool isLogged;
-//  const MyApp({super.key, required this.session, required this.isLogged});
-
-  //@override
-  //Widget build(BuildContext context) {
-  //  return MaterialApp(
-  //    title: 'Cadastro por SMS',
-  //    theme: ThemeData(primarySwatch: Colors.blue),
-  //    navigatorKey: navigatorKey,
-  //    home: const HomeScreen(name:'teste'),
-  //    routes: {
-  //      NotificationScreen.route: (context) => const NotificationScreen(),
-  //    },
-  //  );
-  //}
-
-//  @override
-//  Widget build(BuildContext context) {
-//    return MaterialApp(
-//      home: isLogged ? HomeScreen(onLogout: () => session.logout())
-//                    : const PhoneInputScreen(),
-//    );
-//  }
-//}
