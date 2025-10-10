@@ -167,13 +167,6 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
 
       final data  = jsonDecode(res.body) as Map<String, dynamic>;
       final user = data['user'];
-      //final users = (data['user'] as List?) ?? [];
-      //if (users.isEmpty) {
-      //  ScaffoldMessenger.of(context).showSnackBar(
-      //    const SnackBar(content: Text('Usuário não encontrado')),
-      //  );
-      //  return false;
-      //}
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Usuário não encontrado')),
