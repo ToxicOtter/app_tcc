@@ -9,7 +9,6 @@ import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-import 'otp_screen.dart';
 import 'home_screen.dart';
 import '../../services/session.dart';
 
@@ -77,7 +76,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
 
       final req = http.MultipartRequest('POST', usersUri)
         ..fields['username'] = _nameController.text.trim()
-        ..fields['email']    = _raController.text.trim()  // RA no campo email (como seu backend)
+        ..fields['email']    = _raController.text.trim()  // RA no campo email
         ..fields['phone']    = _phoneController.text.trim();
 
       final mime = lookupMimeType(_imageName!, headerBytes: _imageBytes!) ?? 'image/jpeg';
@@ -113,7 +112,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
       // 1) salve o user_id imediatamente
       await widget.session.saveSession(userId: userId);
 
-      // 2) tente pegar o token e registrar o device (melhoria posterior, não bloqueia login)
+      // 2) tente pegar o token e registrar o device
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null && token.isNotEmpty) {
         await http.post(
@@ -125,7 +124,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
             'platform': _platformLabel(),
           }),
         );
-        // atualize o token localmente (opcional)
+        // atualize o token localmente
         await widget.session.saveSession(userId: userId, fcmToken: token);
       }
 
@@ -216,19 +215,9 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
     if (!ok || !mounted) return;
 
     if (tabIndex == 0) {
-      // após cadastro -> OTP (ou vá direto pra Home se preferir)
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OtpScreen(
-            verificationId: 'test_verification_id',
-            name: _nameController.text,
-            ra: _raController.text,
-            phone: _phoneController.text,
-            imagePath: '', // opcional
-            session: widget.session,
-          ),
-        ),
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => HomeScreen(session: widget.session, onLogout: () => widget.session.logout())),
+        (_) => false,
       );
     } else {
       // login -> Home
