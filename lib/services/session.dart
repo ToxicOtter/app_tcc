@@ -28,7 +28,6 @@ class SessionService {
     };
   }
 
-  // (opcional) helper explícito
   Future<void> saveUserId(int userId) async {
     final sp = await SharedPreferences.getInstance();
     await sp.setInt(_kUserIdKey, userId);
@@ -50,7 +49,6 @@ class SessionService {
     return sp.getString(_kFcmKey);
   }
 
-  /// Exemplo de login (ajuste para sua API)
   Future<int?> login({String? username, String? email}) async {
     final resp = await http.post(
       Uri.parse('$baseUrl/api/auth/login'),
@@ -91,10 +89,9 @@ class SessionService {
     final token  = sp.getString(_kFcmKey);
 
     if (userId != null && token != null && token.isNotEmpty) {
-      // se tiver endpoint de remoção de device, chame aqui
       await http.post(
         Uri.parse('$baseUrl/api/devices/delete'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json'}, 
         body: jsonEncode({'user_id': userId, 'fcm_token': token}),
       );
     }
